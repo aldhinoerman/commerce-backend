@@ -12,6 +12,11 @@ RUN pnpm install
 
 # Copy application code and build
 COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build app
 RUN pnpm run build
 
 # Stage 2: Run
@@ -28,6 +33,9 @@ RUN pnpm install --prod
 
 # Copy build files from the builder stage
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prisma ./prisma
 
 # Command to run the application
 CMD ["node", "dist/main.js"]
