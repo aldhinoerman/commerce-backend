@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:18.20.5-alpine as builder
+FROM node:20.9.0-alpine as builder
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -9,6 +9,9 @@ WORKDIR /app
 # Copy package files and install dependencies
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
+
+# Rebuild bcrypt for the container's architecture
+RUN pnpm rebuild bcrypt
 
 # Copy application code and build
 COPY . .
@@ -20,7 +23,7 @@ RUN pnpm prisma generate
 RUN pnpm run build
 
 # Stage 2: Run
-FROM node:18.20.5-alpine
+FROM node:20.9.0-alpine
 
 # Install pnpm globally
 RUN npm install -g pnpm
