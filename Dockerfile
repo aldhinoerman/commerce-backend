@@ -1,23 +1,33 @@
-# Base image
-FROM node:20
+# Stage 1: Build
+FROM node:20-alpine as builder
 
-# Create app directory
-WORKDIR /usr/src/app
+# Install pnpm globally
+RUN npm install -g pnpm
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-COPY package*.json ./
+WORKDIR /app
 
-# Install app dependencies
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
-# Bundle app source
+# Copy application code and build
 COPY . .
-
-# Creates a "dist" folder with the production build
 RUN pnpm run build
 
-# Expose the port on which the app will run
-EXPOSE 3000
+# Stage 2: Run
+FROM node:20-alpine
 
-# Start the server using the production build
-CMD ["node", "dist/main"]
+# Install pnpm globally
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy only necessary files for production
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod
+
+# Copy build files from the builder stage
+COPY --from=builder /app/dist ./dist
+
+# Command to run the application
+CMD ["node", "dist/main.js"]
