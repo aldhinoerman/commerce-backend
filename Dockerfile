@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:20-alpine as builder
+FROM node:18.20.5-alpine as builder
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -14,13 +14,13 @@ RUN pnpm install
 COPY . .
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN pnpm prisma generate
 
 # Build app
 RUN pnpm run build
 
 # Stage 2: Run
-FROM node:20-alpine
+FROM node:18.20.5-alpine
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -33,9 +33,8 @@ RUN pnpm install --prod
 
 # Copy build files from the builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules ./node_modules
 
 # Command to run the application
-CMD ["node", "dist/main.js"]
+CMD ["pnpm", "start:prod"]
