@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -30,27 +31,42 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @Get()
   async listUsers(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('email') email?: string,
   ) {
-    const users = await this.userService.listUsers({ page, limit, email });
+    const numericPage = Number(page);
+    const numericLimit = Number(limit);
+    const users = await this.userService.listUsers({
+      page: numericPage,
+      limit: numericLimit,
+      email,
+    });
     return ResponseUtil.success('Users retrieved successfully', users);
   }
 
   @UseGuards(AuthGuard)
   @Get(':id')
-  async getUser(@Param('id') id: number) {
-    return this.userService.getUser(id);
+  async getUser(@Param('id') id: string) {
+    const numericId = parseInt(id, 10);
+    return this.userService.getUser(numericId);
   }
 
   @UseGuards(AuthGuard)
   @Put(':id')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async updateUser(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.updateUser(id, updateUserDto);
+    const numericId = parseInt(id, 10);
+    return this.userService.updateUser(numericId, updateUserDto);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete(':id')
+  async deleteProduct(@Param('id') id: string) {
+    const numericId = parseInt(id, 10);
+    return this.userService.deleteUser(+numericId);
   }
 }

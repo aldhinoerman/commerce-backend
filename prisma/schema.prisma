@@ -20,7 +20,7 @@ model Product {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   categoryId  Int
-  description String
+  description String?
   title       String
   category    Category  @relation(fields: [categoryId], references: [id])
   variants    Variant[]
@@ -35,7 +35,7 @@ model Variant {
   image       String
   productId   Int
   name        String
-  description String
+  description String?
   price       Float
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -50,7 +50,7 @@ model Variant {
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
-  image     String
+  image     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]

@@ -16,9 +16,12 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === 'P2002') {
         const target = (exception.meta?.target as string[]) || [];
+        const targetMessage = Array.isArray(target)
+          ? target.join(', ')
+          : target;
         return response.status(HttpStatus.BAD_REQUEST).json({
           statusCode: HttpStatus.BAD_REQUEST,
-          message: `The value for ${target.join(', ')} already exists. Please use a different value.`,
+          message: `The value for ${targetMessage} already exists. Please use a different value.`,
           error: 'Bad Request',
         });
       }
