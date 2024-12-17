@@ -1,9 +1,11 @@
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsInt,
-  IsArray,
   IsNotEmpty,
   IsOptional,
+  ValidateNested,
+  IsArray,
 } from 'class-validator';
 
 export class CreateVariantDto {
@@ -12,24 +14,26 @@ export class CreateVariantDto {
   name: string;
 
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @IsString()
   @IsNotEmpty()
   sku: string;
 
+  @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
   stock: number;
 
+  @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
   price: number;
 
   @IsString()
-  @IsNotEmpty()
-  image: string;
+  @IsOptional()
+  image?: string;
 }
 
 export class CreateProductDto {
@@ -38,14 +42,17 @@ export class CreateProductDto {
   title: string;
 
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  @IsOptional()
+  description?: string;
 
+  @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
   categoryId: number;
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVariantDto)
   variants?: CreateVariantDto[];
 }

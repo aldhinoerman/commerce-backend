@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { cleanUndefined } from 'src/utils/functions';
 
 @Injectable()
 export class ProductsService {
@@ -15,15 +16,15 @@ export class ProductsService {
   //   Create a product
   async createProduct(data: {
     title: string;
-    description: string;
-    categoryId: number;
+    description?: string;
+    categoryId?: number;
     variants?: {
       name: string;
       price: number;
       stock: number;
-      description: string;
+      description?: string;
       sku: string;
-      image: string;
+      image?: string;
     }[];
   }) {
     return this.prisma.product.create({
@@ -79,11 +80,13 @@ export class ProductsService {
     });
 
     return {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      products,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      data: products,
     };
   }
 
@@ -112,17 +115,46 @@ export class ProductsService {
     });
 
     return {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      variants,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      data: variants,
     };
   }
 
   // List categories
-  async listCategories() {
-    return this.prisma.category.findMany();
+  async listCategories(query: {
+    page?: number;
+    limit?: number;
+    sku?: string;
+    name?: string;
+  }) {
+    const { page = 1, limit = 10, name } = query;
+    const where: any = {};
+    if (name) {
+      where.name = { contains: name, mode: 'insensitive' };
+    }
+    const total = await this.prisma.category.count({ where });
+    const categories = await this.prisma.category.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        products: true,
+      },
+    });
+    return {
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      data: categories,
+    };
   }
 
   // Create a new category
@@ -133,15 +165,23 @@ export class ProductsService {
   }
 
   // Update an existing category
-  async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
+  async updateCategory(updateCategoryDto: UpdateCategoryDto) {
+    const { id, ...updatedData } = updateCategoryDto;
+
+    const parsedId = Number(id);
+    if (isNaN(parsedId)) {
+      throw new BadRequestException('Invalid or missing ID');
+    }
+    const category = await this.prisma.category.findUnique({
+      where: { id: parsedId },
+    });
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
 
-    return this.prisma.category.update({
-      where: { id },
-      data: updateCategoryDto,
+    return await this.prisma.category.update({
+      where: { id: parsedId },
+      data: updatedData,
     });
   }
 
@@ -192,46 +232,57 @@ export class ProductsService {
   }
 
   //   Update a product
-  async updateProduct(id: number, updateProductDto: UpdateProductDto) {
-    const { categoryId, variants, ...data } = updateProductDto;
+  async updateProduct(updateProductDto: UpdateProductDto) {
+    const { id, categoryId, variants, ...data } = updateProductDto;
 
-    return this.prisma.product.update({
-      where: { id },
-      data: {
-        ...data,
-        ...(categoryId && {
-          category: {
-            connect: { id: categoryId },
-          },
-        }),
-        ...(variants && {
-          variants: {
-            upsert: variants.map((variant) => ({
-              where: { sku: variant.sku },
-              create: {
-                name: variant.name,
-                sku: variant.sku,
-                description: variant.description,
-                price: variant.price,
-                stock: variant.stock,
-                image: variant.image,
-              },
-              update: {
-                name: variant.name,
-                description: variant.description,
-                price: variant.price,
-                stock: variant.stock,
-                image: variant.image,
-              },
-            })),
-          },
-        }),
-      },
-    });
+    const parseData = cleanUndefined(data);
+
+    try {
+      const result = await this.prisma.product.update({
+        where: { id: Number(id) },
+        data: {
+          ...parseData,
+          ...(categoryId && {
+            category: {
+              connect: { id: Number(categoryId) },
+            },
+          }),
+          ...(variants && {
+            variants: {
+              upsert: variants.map((variant) => ({
+                where: { sku: variant.sku },
+                create: {
+                  name: variant.name,
+                  sku: variant.sku,
+                  description: variant.description || null,
+                  price: Number(variant.price),
+                  stock: Number(variant.stock),
+                  image: variant.image,
+                },
+                update: {
+                  name: variant.name,
+                  description: variant.description || null,
+                  price: Number(variant.price),
+                  stock: Number(variant.stock),
+                  image: variant.image,
+                },
+              })),
+            },
+          }),
+        },
+      });
+      return result;
+    } catch (error) {
+      console.error('Prisma Update Error:', error);
+      throw new Error(`Failed to update product: ${error.message}`);
+    }
   }
 
   //   Delete a product
   async deleteProduct(id: number) {
+    await this.prisma.variant.deleteMany({
+      where: { productId: Number(id) },
+    });
     return this.prisma.product.delete({
       where: { id },
     });
