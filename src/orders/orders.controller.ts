@@ -9,7 +9,6 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { OrdersService } from './orders.service';
 import { AddToCartDto, RemoveCartItemDto, UpdateCartDto } from './dto/cart.dto';
 import { ResponseUtil } from 'src/utils/response.util';
@@ -18,10 +17,7 @@ import { PaymentDto } from './dto/payment.dto';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly ordersService: OrdersService,
-  ) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   @Get('cart')
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -63,14 +59,14 @@ export class OrdersController {
     return ResponseUtil.success('Cart item removed successfully', {});
   }
 
-  @Post('checkout')
+  @Post()
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async checkout(@Body() checkoutDto: CheckoutDto) {
     const result = await this.ordersService.checkout(checkoutDto.username);
     return ResponseUtil.success(result.message, {});
   }
 
-  @Post()
+  @Post('payment')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async pay(@Body() paymentDto: PaymentDto) {
     const result = await this.ordersService.processPayment(
