@@ -125,6 +125,22 @@ export class ProductsService {
     };
   }
 
+  async listProductById(id: number) {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        variants: true,
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    return { data: product };
+  }
+
   // List categories
   async listCategories(query: {
     page?: number;

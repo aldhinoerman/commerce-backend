@@ -70,11 +70,11 @@ model StockOpname {
 model Order {
   id         Int         @id @default(autoincrement())
   totalPrice Float
+  createdAt  DateTime    @default(now())
   status     String      @default("pending")
   username   String
-  orderItems OrderItem[]
-  createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+  orderItems OrderItem[]
 }
 
 model Cart {
