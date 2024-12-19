@@ -15,56 +15,76 @@ export class OrdersService {
     @Inject('CHECKOUT_QUEUE') private readonly checkoutQueue: ClientProxy,
   ) {}
 
-  async getCart(username: string) {
-    return this.prisma.cart.findMany({
-      where: { username },
-      include: { variant: true },
-    });
+  async getCart(query: { username: string }) {
+    try {
+      const { username } = query;
+
+      const carts = await this.prisma.cart.findMany({
+        where: { username },
+        include: { variant: true },
+      });
+      return { data: carts };
+    } catch (error) {
+      console.error('Prisma Get Error:', error);
+      throw new Error(`Failed to get cart: ${error.message}`);
+    }
   }
 
   async addToCart(username: string, variantId: number, quantity: number) {
-    const variant = await this.prisma.variant.findUnique({
-      where: { id: variantId },
-    });
+    try {
+      const variant = await this.prisma.variant.findUnique({
+        where: { id: variantId },
+      });
 
-    // Check variant
-    if (!variant) {
-      throw new Error('Variant not found');
+      // Check variant
+      if (!variant) {
+        throw new Error('Variant not found');
+      }
+
+      // Quantity must positive
+      if (quantity < 1) {
+        throw new Error('Quantity must at least 1');
+      }
+
+      // Add or update the cart
+      return this.prisma.cart.upsert({
+        where: {
+          username_variantId: { username, variantId },
+        },
+        create: {
+          username,
+          variantId,
+          quantity,
+        },
+        update: {
+          quantity: { increment: quantity },
+        },
+      });
+    } catch (error) {
+      console.error('Prisma Create Error:', error);
+      throw new Error(`Failed to create cart: ${error.message}`);
     }
-
-    // Quantity must positive
-    if (quantity < 1) {
-      throw new Error('Quantity must at least 1');
-    }
-
-    // Add or update the cart
-    return this.prisma.cart.upsert({
-      where: {
-        username_variantId: { username, variantId },
-      },
-      create: {
-        username,
-        variantId,
-        quantity,
-      },
-      update: {
-        quantity: { increment: quantity },
-      },
-    });
   }
 
   async updateCartItem(username: string, variantId: number, quantity: number) {
-    // Quantity must positive
-    if (quantity < 1) {
-      throw new Error('Quantity must at least 1');
-    }
+    try {
+      if (typeof quantity === 'undefined' || quantity < 1) {
+        throw new Error('Quantity must at least 1');
+      }
 
-    return this.prisma.cart.update({
-      where: {
-        username_variantId: { username, variantId },
-      },
-      data: { quantity },
-    });
+      console.log('Updating cart item:', { username, variantId, quantity });
+
+      const updatedCartItem = await this.prisma.cart.update({
+        where: { username_variantId: { username, variantId } },
+        data: { quantity },
+      });
+
+      console.log('Update successful:', updatedCartItem);
+      return updatedCartItem;
+    } catch (error) {
+      console.error('Prisma Create Error:', error);
+      throw new Error(`Failed to create cart: ${error.message}`);
+    }
   }
 
   async removeCartItem(username: string, variantId: number) {

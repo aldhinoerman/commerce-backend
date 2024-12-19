@@ -114,6 +114,12 @@ export class ProductsController {
     });
   }
 
+  @Get(':id')
+  async getProductById(@Param('id') id: string) {
+    const numericId = Number(id);
+    return this.productsService.listProductById(numericId);
+  }
+
   @Get('variants')
   async listVariants(
     @Query('page') page?: string,

@@ -2,9 +2,10 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Patch,
   Post,
-  Req,
+  Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -22,6 +23,13 @@ export class OrdersController {
     private readonly ordersService: OrdersService,
   ) {}
 
+  @Get('cart')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async getCart(@Query('username') username: string) {
+    const carts = await this.ordersService.getCart({ username });
+    return ResponseUtil.success('Successfully retrieved cart', carts);
+  }
+
   @Post('cart')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async addToCart(@Body() addToCartDto: AddToCartDto) {
@@ -36,6 +44,7 @@ export class OrdersController {
   @Patch('cart')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async updateCartItem(@Body() updateCartDto: UpdateCartDto) {
+    console.log('username from query');
     const cartItem = await this.ordersService.updateCartItem(
       updateCartDto.username,
       updateCartDto.variantId,
